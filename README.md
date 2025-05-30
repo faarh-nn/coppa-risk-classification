@@ -42,7 +42,11 @@ Dataset yang digunakan pada projek ini dapat diakses pada tautan berikut:
 
 Dataset ini berisi informasi yang diambil dari major app marketplace, bersama dengan fitur turunan yang terkait dengan privasi dan kepatuhan. Dataset ini mencakup campuran fitur kategorikal, numerik, dan boolean. Nilai yang hilang diwakili oleh string kosong.
 
-### Variabel-variabel pada Restaurant UCI dataset adalah sebagai berikut:
+Dataset ini terdiri dari 7000 observasi dan 17 fitur (5 fitur numerik, 1 fitur boolean yaitu fitur target, dan 11 fitur kategorikal) dengan rincian sebagai berikut:
+![deskripsi-fitur](https://github.com/user-attachments/assets/99abd120-0c36-45fc-aaa5-22720d5a631e)
+
+
+### Variabel-variabel pada dataset yang digunakan adalah sebagai berikut:
 - **`developerCountry`**: Negara tempat developer aplikasi terdaftar. Ini bisa memberikan wawasan tentang kesadaran dan penerapan hukum privasi di wilayah tersebut. Nilai seperti "ADDRESS NOT LISTED IN PLAYSTORE" dan "CANNOT IDENTIFY COUNTRY" menunjukkan data yang hilang atau tidak dapat diambil.
 - **`countryCode`**: Pasar atau wilayah target dari aplikasi (misalnya, GLOBAL, NA, EMEA, LATAM, APAC). NA kemungkinan berarti North America. GLOBAL adalah kategori umum, sedangkan yang lain lebih spesifik secara geografis.
 - **`userRatingCount`**: Jumlah total rating yang diberikan pengguna terhadap aplikasi.
@@ -153,9 +157,10 @@ Pada projek ini, treatment missing value dilakukan dengan tiga cara, masing-masi
 2. Penghapusan observasi missing
    Penghapusan observasi missing dilakukan pada fitur yang memiliki missing value < 1%. Hal ini dilakukan karena penghapusan observasi missing pada fitur yang memiliki missing value dengan jumlah rendah dianggap tidak akan memberikan perubahan yang signifikan pada proses pemodelan nantinya.
 3. Imputasi
-   Imputasi dilakukan pada fitur-fitur yang tidak masuk pada opsi pertama dan opsi kedua di atas. Dalam hal ini imputasi dilakukan menggunakan iterative imputer yang menggunakan semua fitur lainnya (yang tersedia) sebagai input untuk memprediksi nilai yang hilang tersebut, dengan model regresi seperti BayesianRidge. Proses tersebut dilakuan secara iteratif dengan memperbarui estimasi nilai hilang pada setiap iterasinya hingga konvergen atau mencapai jumlah iterasi maksimum. Metode ini lebih akurat dibanding imputasi sederhana karena mempertimbangkan hubungan antar fitur dan dapat menangani dataset dengan banyak missing value.
+   Imputasi dilakukan pada fitur-fitur yang tidak masuk pada opsi pertama dan opsi kedua di atas. Dalam hal ini imputasi dilakukan menggunakan **iterative imputer** yang menggunakan semua fitur lainnya (yang tersedia) sebagai input untuk memprediksi nilai yang hilang tersebut, dengan model regresi seperti BayesianRidge. Proses tersebut dilakuan secara iteratif dengan memperbarui estimasi nilai hilang pada setiap iterasinya hingga konvergen atau mencapai jumlah iterasi maksimum. Metode ini lebih akurat dibanding imputasi sederhana karena mempertimbangkan hubungan antar fitur dan dapat menangani dataset dengan banyak missing value.
+   Dalam menerapkan imputasi, fitur-fitur yang dimiliki terlebih dahulu dipisahkan menjadi tiga tipe: nominal, ordinal, dan numerik. Fitur ordinal diencoding menggunakan OrdinalEncoder dengan urutan kategori yang ditentukan secara eksplisit, fitur nominal diubah menggunakan OneHotEncoder, sedangkan fiturnumerik tetap dibiarkan dalam representasi numeriknya. Setelah semua fitur kategorikal dikonversi ke bentuk numerik, data digabungkan dan dilakukan imputasi nilai hilang menggunakan IterativeImputer (dilatih hanya pada data training untuk menghindari data leakage). Terakhir, hasil imputasi dikembalikan ke bentuk semula (inverse transform) untuk memastikan interpretabilitas dan konsistensi data sebelum digunakan dalam pelatihan model. **Sebagai catatan, encoding variabel kategorikal yang dilakukan pada tahap ini semata-mata hanya diperuntukkan untuk proses imputasi missing value. Karena proses imputasi missing value hanya bisa dilakukan ketika seluruh fitur berada dalam format numerik. Nantinya akan dilakukan encoding variabel kategorikal lagi dengan mekanisme yang sama khusus untuk proses pemodelan**.
 ### Encoding Variabel Kategorikal
-Proses encoding fitur kategorikal dilakukan dengan memperhatikan jenis fitur kategorik itu sendiri. Fitur kategorikal yang bertipe nominal di-encode menggunakan One-Hot Encoder sedangkan fitur kategorikal yang bertipa ordinal di-encode menggunakan Ordinal Encoder.
+Proses encoding fitur kategorikal dilakukan dengan memperhatikan jenis fitur kategorik itu sendiri. Fitur kategorikal yang bertipe nominal di-encode menggunakan One-Hot Encoder, sedangkan fitur kategorikal yang bertipe ordinal di-encode menggunakan Ordinal Encoder. Hal ini dilakukan agar model machine learning dapat memahami dan memproses data kategorikal dengan benar sesuai dengan sifat dan hubungan antar kategori yang dimilikinya, sehingga meningkatkan akurasi dan performa model secara keseluruhan.
 
 ## Modeling
 Secara umum pada tahap pemodelan ini, langkah-langkah yang dilakukan adalah sebagai berikut:
@@ -244,6 +249,31 @@ LightGBM Classifier memiliki sejumlah kelebihan yang membuatnya sangat populer d
 Salah satu kekurangan utama dari model LightGBM Classifier adalah kecenderungannya terhadap overfitting, terutama jika digunakan pada dataset kecil atau bising, karena strategi leaf-wise dapat menghasilkan pohon yang sangat dalam. Model ini juga cukup sensitif terhadap pemilihan hyperparameter, sehingga memerlukan proses tuning yang cermat agar dapat mencapai performa optimal. Selain itu, LightGBM memiliki interpretabilitas yang lebih rendah dibandingkan model linear atau pohon tunggal, sehingga tidak selalu mudah dijelaskan kepada pihak non-teknis. Terakhir, meskipun unggul pada data tabular, LightGBM kurang cocok untuk data non-struktural seperti gambar atau teks mentah tanpa proses prapemrosesan yang memadai. Oleh karena itu, meskipun sangat powerful, penggunaan LightGBM tetap harus disesuaikan dengan karakteristik data dan tujuan analisis.
 ### Catatan
 Pada projek ini model terbaik merupakan CatBoost Classifier, model ini dipilih sebagai model terbaik karena memiliki performa yang lebih baik dibandingkan dengan model lainnya terutama pada metrik AUC yang merupakan metrik utama pada projek ini. Penjelasan lengkap mengenai proses evaluasi moodel pada projek ini diuraikan pada bagian **evaluation**.
+## Hasil Model Development dengan Hyperparameter Tuning Menggunakan Optuna
+Dari hasil hyperparameter tuning menggunakan Optuna yang dilakukan diperoleh kobinasi hyperparameter terbaik pada masing-masing model adalah sebagai berikut:
+| Parameter             | CatBoost                                      | XGBoost                                         | LightGBM                                      |
+|-----------------------|-----------------------------------------------|--------------------------------------------------|-----------------------------------------------|
+| depth / max_depth     | 5                                             | 7                                                | 5                                             |
+| learning_rate         | 0.020222696045590682                         | 0.010748684338336508                            | 0.03524277427146533                          |
+| n_estimators          | 2730                                          | 2363                                             | 1577                                          |
+| min_child_samples / weight | 8                                       | 8                                                | 6                                             |
+| subsample             | 0.785442438128251                            | 0.9830600452086742                              | 0.9239690349553612                           |
+| l2_leaf_reg / reg_lambda | 2.158146091666474                        | 2.0248504434648122                              | 2.756854418038015                            |
+| reg_alpha             | -                                             | 1.4440848051268385                              | 8.115555620480569                            |
+| colsample_bytree      | -                                             | 0.7528917686403951                              | -                                             |
+| feature_fraction      | -                                             | -                                                | 0.5405850236090899                           |
+| bagging_fraction      | -                                             | -                                                | 0.7496192462219053                           |
+| class_weights / scale_pos_weight | {0: 0.5547, 1: 5.0702}             | 9.140350877192983                               | 9.140350877192983                            |
+| loss_function / objective | Logloss                                 | binary:logistic                                  | binary                                        |
+| eval_metric / metric  | -                                             | auc                                              | auc                                           |
+| bootstrap_type        | Bernoulli                                     | -                                                | -                                             |
+| border_count          | 127                                           | -                                                | -                                             |
+| random_strength       | 4.854710359766653                            | -                                                | -                                             |
+| use_label_encoder     | -                                             | False                                            | -                                             |
+| tree_method           | -                                             | gpu_hist                                         | -                                             |
+| random_seed / state   | 42                                            | 42                                               | 42                                            |
+| task_type / device    | GPU                                           | -                                                | gpu                                           |
+| verbose / verbosity   | 0                                             | 0                                                | 1                                             |
 
 ## Evaluation
 Untuk proses evaluasi, projek ini menggunakan enam metrik evaluasi yaitu accuracy, precision, recall, F1-score, AUC, dan balance accuracy. Metrik evaluasi tersebut dipilih karena sesuai dengan tugas dari projek ini yang merupakan tugas klasifikasi. Kemudian, dari 5 metrik evaluasi tersebut, metrik evaluasi utama adalah AUC karena lebih relevan untuk kasus dengan data imbalance seperti pada projek ini. Penjelasan dari masing-masing metrik evaluasi diuraikan sebagai berikut:
@@ -312,14 +342,36 @@ Rincian informasi feature importance dalam bentuk tabel adalah sebagai berikut:
 ![feature-importance-table](https://github.com/user-attachments/assets/f772ea8f-a2e0-4191-815a-68e3f7e9decf)
 
 Dalam projek ini,, fitur yang dipertahankan adalah fitur dengan nilai importance di atas 1.0. Sehingga dari 17 fitur yang digunakan sebelumnya, berubah menjadi hanya 9 fitur saja.
+### Training Ulang Model Menggunakan Fitur Hasil Featrue Selection
+Proses training ulang yang dijalankan setelah tahap feature selection diimpelementasikan persis sama dengan proses training model sebelum feature selection yang dijelaskan sebelumnya (menggunakan model **CatBoost, XGBoost, dan LightGBM** dengan hyperparameter tuning menggunakan Optuna). Kemudian dari hasil training ulang tersebut diperoleh kombinasi hyperparameter terbaik pada masing-masing model adalah sebagai berikut:
+| Parameter               | CatBoost                                      | LightGBM                                      |
+|-------------------------|-----------------------------------------------|-----------------------------------------------|
+| depth / max_depth       | 6                                             | 9                                             |
+| learning_rate           | 0.014316048234469615                         | 0.24530972917090857                          |
+| n_estimators            | 1845                                          | 1871                                          |
+| min_child_samples / weight | 6                                         | 10                                            |
+| subsample               | 0.6822372595652207                            | 0.8107449289947282                           |
+| l2_leaf_reg / reg_lambda | 1.2526655213890152                          | 3.6424940090312554                           |
+| reg_alpha               | -                                             | 5.180751167571764                            |
+| feature_fraction        | -                                             | 0.6307025538288416                           |
+| bagging_fraction        | -                                             | 0.8582711085498285                           |
+| class_weights / scale_pos_weight | {0: 0.5547, 1: 5.0702}              | 9.140350877192983                            |
+| loss_function / objective | Logloss                                    | binary                                        |
+| metric                  | -                                             | auc                                           |
+| bootstrap_type          | Bernoulli                                     | -                                             |
+| border_count            | 50                                            | -                                             |
+| random_strength         | 3.453662960663551                            | -                                             |
+| random_seed / state     | 42                                            | 42                                            |
+| task_type / device      | GPU                                           | gpu                                           |
+| verbose / verbosity     | 0                                             | 1                                             |
+
+Sebagai catatan tambahan, evaluasi model XGBoost tidak ditampilkan setelah feature selection karena ketika proses pembangunan model ulang dilakukan (setelah feature selection) terdapat kesalahan atau error yang terhjadi pada model XGBoost sehingga tidak dapat digunakan pada proses evaluasi.
 ### Hasil Evaluasi Setelah Feature Selection
 Hasil evaluasi model pada data validation setelah proses feaure selection dijalankan disajikan sebagai berikut:
 
 ![evaluation-2](https://github.com/user-attachments/assets/2ab0b462-1c24-4b68-a538-847093158565)
 
-Berdasarkan tabel di atas, terlihat bahwa model CatBoost tetap menjadi model terbaik karena unggul pada semua metrik evaluasi. Namun, ternyata terdapat penurunan nilai pada recall, F1-score, dan balance accuracy, sehingga model yang akan digunakan adalah model CatBoost sebelum feature selection. 
-
-Sebagai catatan tambahan, evaluasi model XGBoost tidak ditampilkan setelah feature selection karena ketika proses pembangunan model ulang dilakukan (setelah feature selection) terdapat kesalahan atau error yang terhjadi pada model XGBoost sehingga tidak dapat digunakan pada proses evaluasi.
+Berdasarkan tabel di atas, terlihat bahwa model CatBoost tetap menjadi model terbaik karena unggul pada semua metrik evaluasi. Namun, ternyata terdapat penurunan nilai pada recall, F1-score, dan balance accuracy, <strong><u>sehingga model yang akan digunakan adalah model CatBoost sebelum feature selection</u></strong>. 
 
 ## Daftar Pustaka
 Widyaningsih, T., & Suryaningsi, S. (2022). Kajian Perlindungan Hukum Terhadap Data Pribadi Digital Anak Sebagai Hak Atas Privasi di Indonesia. Nomos : Jurnal Penelitian Ilmu Hukum, 2(3), 93–103. https://doi.org/10.56393/nomos.v1i5.582.
